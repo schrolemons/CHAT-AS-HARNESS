@@ -106,7 +106,7 @@ export function createPluginHost(opts = {}) {
     };
   }
 
-  async function loadOne(dir, disabledIds) {
+  async function loadOne(dir, disabledIds, builtin = true) {
     const manifestPath = path.join(dir, 'plugin.json');
     if (!fs.existsSync(manifestPath)) return;
     const manifest = readJsonSafe(manifestPath, null);
@@ -114,7 +114,7 @@ export function createPluginHost(opts = {}) {
     const id = String(manifest.id || path.basename(dir));
     if (!safeId(id)) { warnings.push('插件 id 不合法：' + id); return; }
     if (manifest.enabled === false || disabledIds.includes(id)) {
-      plugins.set(id, { id, manifest, ctx: null, hooks: {}, skillPath: null, disabled: true, timer: null, tools: [] });
+      plugins.set(id, { id, manifest, ctx: null, hooks: {}, skillPath: null, disabled: true, timer: null, tools: [], builtin });
       return;
     }
     const entry = path.join(dir, String(manifest.main || 'index.js'));
@@ -163,7 +163,8 @@ export function createPluginHost(opts = {}) {
         disabled: false,
         tools: pluginTools,
         schedule: inst.schedule || manifest.schedule || null,
-        timer: null
+        timer: null,
+        builtin
       });
       log('[plugin] 已加载 ' + id + (manifest.description ? ' — ' + manifest.description : ''));
     } catch (error) {
@@ -237,6 +238,7 @@ export function createPluginHost(opts = {}) {
           description: p.manifest?.description || '',
           category: p.manifest?.category || '未分类',
           layer: p.manifest?.layer || '',
+          builtin: p.builtin !== false,
           tags: Array.isArray(p.manifest?.tags) ? p.manifest.tags : [],
           enabled: !p.disabled,
           hooks: Object.keys(p.hooks || {}),
@@ -258,6 +260,7 @@ export function createPluginHost(opts = {}) {
         description: p.manifest?.description || '',
         category: p.manifest?.category || '未分类',
         layer: p.manifest?.layer || '',
+        builtin: p.builtin !== false,
         tags: Array.isArray(p.manifest?.tags) ? p.manifest.tags : [],
         enabled: !p.disabled,
         hooks: Object.keys(p.hooks || {}),

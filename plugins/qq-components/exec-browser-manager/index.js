@@ -1,33 +1,32 @@
-// 浏览器管理插件（E 层）：像人一样浏览的管理口径。
+// 浏览器管理插件（E 层）：双模 —— 无头监控/操控 + 可见窗口做关键授权。
 //
-// 实际浏览器动作仍走既有 Playwright MCP（真实 Edge CDP + puppeteer-core），
-// 这个插件负责「怎么用得安全、拟人、免重复登录」：
-//   · 复用本机登录态，不自动填账号密码；
-//   · 读结构优先、一次一页、慢一点，不批量爬；
-//   · 禁支付/银行/身份验证，敏感页不截图；
-//   · 遇到登录/验证码，让用户自己在窗口完成；
-//   · 节奏拟人，防风控。
-// 后续可加「无头模式」：同一套规则，后端换成 headless 浏览器（保留独立 profile 以复用登录态）。
+// 语义（管理员明确）：
+//   · 监控、操控、只读抓取 → 无头（headless），复用本机登录态，不重登；
+//   · 需要激活登录态或关键授权（登录、验证码、购物结算、支付确认）→ 弹出可见窗口，让用户看到并亲自操作。
+// 实际浏览器动作仍走 Playwright MCP（真实 Edge + puppeteer-core），本插件管口径与切换策略。
 
 export function createPlugin(ctx) {
-  const rules = Array.isArray((ctx.config || {}).rules) && ctx.config.rules.length
-    ? ctx.config.rules.map(String).filter(Boolean).slice(0, 12)
-    : ['复用本机登录态，不自动填账号密码', '禁支付/银行/身份验证', '节奏拟人防风控'];
+  const cfg = ctx.config || {};
+  const rules = Array.isArray(cfg.rules) && cfg.rules.length ? cfg.rules.map(String).filter(Boolean).slice(0, 12) : [];
+  const headlessFor = String(cfg.headlessFor || 'monitor|automate|scrape-readonly');
+  const visibleFor = String(cfg.visibleFor || 'login|auth|purchase|checkout|captcha|payment-confirm');
 
   ctx.registerTool('browser_policy', {
-    description: '查询浏览器使用的安全与拟人规则（只读）',
-    handler: () => ({ ok: true, mode: 'real-edge', headless: 'planned', rules })
+    description: '查询浏览器双模策略（哪些走无头、哪些弹可见窗口）',
+    handler: () => ({ ok: true, mode: 'dual', headlessFor, visibleFor, rules })
   });
 
   return {
     hooks: {
       beforePrompt(payload) {
-        // 只在需要用到浏览器的会话里给出规则，避免每个回合都塞。
-        if (!/(browser|浏览器|抓取|网站|网页|登录态|风控)/.test(String(payload?.incomingText || '') + String(payload?.reason || ''))) return '';
+        const hit = /(浏览器|网页|网站|抓取|登录|验证码|购物|支付|风控|无头)/.test(String(payload?.incomingText || '') + String(payload?.reason || ''));
+        if (!hit) return '';
         return [
-          '【浏览器使用（像人一样）】',
+          '【浏览器使用｜双模】',
+          `- 无头（headless）：${headlessFor} —— 复用本机登录态，不自动填账号密码，不重登。`,
+          `- 可见窗口（用户操作）：${visibleFor} —— 停下来让用户自己完成，你只负责把窗口打开、指到这一步。`,
           ...rules.map((r) => '- ' + r),
-          '规则优先：拿不准时宁可慢一点、少一步，也不要触发风控或让用户重新登录。'
+          '切换原则：拿不准是不是“关键授权”时，宁可弹可见窗口，也不要在无头里替用户点。'
         ].join('\n');
       }
     }

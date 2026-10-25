@@ -15,7 +15,7 @@
 
 1. 安装 **DeepSeek Harness**（本仓库不含 Harness 本体）。
 2. 安装本插件到 Harness 的插件目录。
-3. 启动 Harness 后，在会话里对 AI 说「激活」或双击《一键启动》。
+3. （默认走 SnowLuma 网关）启动 Harness 后，在会话里对 AI 说「激活」或双击《一键启动》。
 4. AI 按激活剧本引导：装依赖 → 起 SnowLuma → 填机器人/管理员/白名单 → 选组件（默认全上）→ 起桥接。
 5. 打开本机控制台（默认 `http://127.0.0.1:3100`）或 `/api/harness/page` 看七层驾驶舱。
 
@@ -25,7 +25,7 @@
 src/                桥接内核 + 插件宿主 + MCP 工具面
 plugins/qq-components/   七层插件（每个带 skill.md）
 public/             前端：harness.html（七层）、plugins.html、console.html
-roles/              人格卡（大肥鱼等）
+roles/              人格卡（仅大肥鱼）
 dsh/agent-presets/  Harness preset（qq-chat / qq-chat-v2 / qq-chat-dev）
 docs/               文档与蓝图
 config.example.json 配置模板（无任何真实凭据）

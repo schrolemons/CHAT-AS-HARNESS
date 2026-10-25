@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness Console · 七层</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #0d1014; color: #e6e8ee; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: #131821; border-bottom: 1px solid #232a36; position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .3px; }
+  header .muted { color: #8791a5; font-size: 12px; }
+  header .spacer { flex: 1; }
+  input { background: #0f141c; border: 1px solid #2a3342; color: #dfe4ef; border-radius: 8px; padding: 6px 10px; min-width: 170px; }
+  button { background: #1b2230; color: #dfe4ef; border: 1px solid #2a3342; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  button:hover { border-color: #3f7cff; }
+  main { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 58px); }
+  nav { border-right: 1px solid #232a36; padding: 10px; }
+  nav button { display: block; width: 100%; text-align: left; margin-bottom: 6px; padding: 9px 10px; background: transparent; border: 1px solid transparent; }
+  nav button.active { background: #172033; border-color: #3f7cff; }
+  nav .code { display: inline-block; width: 18px; color: #7fa8ff; font-weight: 700; }
+  nav .cnt { float: right; color: #6f7a90; font-size: 12px; }
+  section#panel { padding: 18px 22px; }
+  h2 { margin: 0 0 6px; font-size: 18px; }
+  h3 { margin: 20px 0 8px; font-size: 13px; color: #9aa5b8; font-weight: 600; letter-spacing: .4px; }
+  .desc { color: #929cb0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .card { border: 1px solid #232a36; background: #121721; border-radius: 10px; padding: 10px 12px; }
+  .card .name { font-weight: 600; }
+  .card .id { color: #6f7a90; font-size: 11px; }
+  .card .d { color: #98a1b5; font-size: 12px; margin-top: 5px; }
+  .pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid #2d3644; float: right; }
+  .on { color: #73d59a; border-color: #2f6b49; background: #14251b; }
+  .off { color: #d58b8b; border-color: #6b2f2f; background: #241414; }
+  .item { padding: 8px 0; border-bottom: 1px dashed #1e2530; color: #b6bfd0; }
+  .item:last-child { border-bottom: none; }
+  .item b { color: #e6e8ee; font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; color: #8fb4ff; background: #1b2a44; border-radius: 999px; padding: 1px 8px; margin-right: 6px; }
+  a { color: #7fa8ff; text-decoration: none; }
+  .err { color: #ff9c9c; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Harness Console</h1>
+  <span class="muted">七层结构 · 基于本项目的自定义实现</span>
+  <span class="spacer"></span>
+  <span class="muted" id="status">加载中…</span>
+  <input id="token" placeholder="控制台令牌" />
+  <button id="refresh">刷新</button>
+</header>
+<main>
+  <nav id="nav"></nav>
+  <section id="panel"></section>
+</main>
+<script>
+(() => {
+  const LAYERS = [
+    { id: 'C', name: '上下文与记忆', role: '给模型看什么、记住什么' },
+    { id: 'T', name: '工具接口与协议', role: '能力怎么被描述与调用' },
+    { id: 'E', name: '环境与执行', role: '桥接、沙箱、浏览器、审批' },
+    { id: 'L', name: '生命周期与编排', role: '唤醒、回合、定时、恢复' },
+    { id: 'O', name: '可观测与运维', role: '日志、成本、自愈、控制台' },
+    { id: 'V', name: '验证与评估', role: '基准、回归、归因' },
+    { id: 'G', name: '治理与安全', role: '权限、策略、审计、闸门' },
+    { id: 'S', name: '近人意识（SCHNIE）', role: '预留：哲学资料与逻辑方式驱动的「近人」核心' }
+  ];
+  // 遗留能力按层归位（不重不漏）：这些是已有实现，但还没拆成独立插件。
+  const LEGACY = {
+    S: [['SCHNIE 占位', '等待哲学思考资料与逻辑方式；当前不改行为']],
+    C: [
+      ['上下文装配', '唤醒提示词：角色/时间感/参与度/插件块；快照与已读水位'],
+      ['记忆分层', '短期会话状态 / 中期 tasks-*.md / 长期 memory/*.md + 全局画像'],
+      ['黑话学习', 'state/slang*.json：候选、确认、注入（控制台「黑话」页）']
+    ],
+    T: [
+      ['MCP 工具面', 'mcp-snowluma-safe（29 个 qq_* 工具）、host、web-search'],
+      ['工具声明', 'tool-registry 插件（分类 + 只读/写入）']
+    ],
+    E: [
+      ['桥接本体', '传输/状态/调度/发送/鉴权/看门狗（env-bridge 插件声明）'],
+      ['沙箱与审批', 'DSH workspace-write / danger-full-access、admin-dev'],
+      ['浏览器', '真实 Edge CDP 9227']
+    ],
+    L: [
+      ['唤醒与回合', '唤醒配置、社交循环、回复检查、沉睡前观察'],
+      ['主动行为', '时间冒泡、开机问候、主动机会（life- 插件）'],
+      ['恢复', '看门狗退役保留 pendingWake；checkpoint 尚未实现']
+    ],
+    O: [
+      ['日志', 'state/bridge.log、qq-activity.log、工具调用日志'],
+      ['成本', 'token 账本、用量页（按会话/时间，未按任务归因）'],
+      ['自愈', '看门狗；自我迭代 obs-self-review 插件']
+    ],
+    V: [
+      ['离线测试', 'npm run test:audit 等脚本'],
+      ['回归用例', 'eval-regression 插件（失败转用例）'],
+      ['缺口', '基准/评分器/跨层归因尚未实现']
+    ],
+    G: [
+      ['边界声明', 'gov-policy 插件（规则可见可改）'],
+      ['执行拦截', '白名单、控制台/会话令牌、内容闸门、画像脱敏、state ACL'],
+      ['缺口', '审计轨迹、声明式策略语言尚未实现']
+    ]
+  };
+
+  const qs = new URLSearchParams(location.search);
+  const tokenEl = document.getElementById('token');
+  tokenEl.value = qs.get('token') || '';
+  if (!tokenEl.value) {
+    try { const t = prompt('控制台访问令牌'); if (t) { tokenEl.value = t; qs.set('token', t); history.replaceState(null, '', '?' + qs.toString()); } } catch {}
+  }
+  const state = { layers: LAYERS, plugins: [], active: 'C' };
+  const navEl = document.getElementById('nav');
+  const panelEl = document.getElementById('panel');
+  const statusEl = document.getElementById('status');
+
+  const api = async (path) => {
+    const u = new URL(path, location.origin);
+    u.searchParams.set('token', tokenEl.value.trim());
+    const res = await fetch(u);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  };
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function renderNav() {
+    navEl.innerHTML = state.layers.map((l) => {
+      const n = state.plugins.filter((p) => p.layer === l.id).length;
+      const legacy = (LEGACY[l.id] || []).length;
+      return `<button data-layer="${l.id}" class="${state.active === l.id ? 'active' : ''}">
+        <span class="code">${l.id}</span>${esc(l.name)}<span class="cnt">${n}插件/${legacy}能力</span>
+      </button>`;
+    }).join('');
+    navEl.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { state.active = b.dataset.layer; renderNav(); renderPanel(); }));
+  }
+
+  function renderPanel() {
+    const layer = state.layers.find((l) => l.id === state.active);
+    const plugins = state.plugins.filter((p) => p.layer === layer.id);
+    const legacy = LEGACY[layer.id] || [];
+    panelEl.innerHTML = `
+      <h2><span class="tag">${layer.id}</span>${esc(layer.name)}</h2>
+      <div class="desc">${esc(layer.role)}</div>
+      <h3>插件（${plugins.length}）</h3>
+      <div class="cards">
+        ${plugins.length ? plugins.map((p) => `
+          <div class="card">
+            <span class="pill ${p.enabled ? 'on' : 'off'}">${p.enabled ? '启用' : '停用'}</span>
+            <div class="name">${esc(p.name)}</div>
+            <div class="id">${esc(p.id)} v${esc(p.version || '0')}</div>
+            <div class="d">${esc(p.description)}</div>
+            <div style="margin-top:6px">${(p.tools || []).map((t) => `<span class="tag">${esc(t.name)}</span>`).join('')}</div>
+          </div>`).join('') : '<div class="desc">这一层还没有插件（缺口）</div>'}
+      </div>
+      <h3>已有能力 / 遗留实现（${legacy.length}）</h3>
+      ${legacy.map(([t, d]) => `<div class="item"><b>${esc(t)}</b> — ${esc(d)}</div>`).join('') || '<div class="desc">无</div>'}
+      <h3>入口</h3>
+      <div class="row">
+        <a href="/api/plugins/page?token=${encodeURIComponent(tokenEl.value.trim())}" target="_blank">插件管理</a>
+        <a href="/?token=${encodeURIComponent(tokenEl.value.trim())}" target="_blank">原控制台（遗留）</a>
+      </div>
+    `;
+  }
+
+  async function refresh() {
+    try {
+      const data = await api('/api/plugins');
+      state.plugins = data.plugins || [];
+      statusEl.textContent = `${data.count} / ${data.total} 个插件启用`;
+      renderNav();
+      renderPanel();
+    } catch (e) {
+      statusEl.textContent = '加载失败：' + e.message;
+      panelEl.innerHTML = `<div class="err">读不到数据：检查令牌与桥接状态。${esc(e.message)}</div>`;
+    }
+  }
+
+  document.getElementById('refresh').addEventListener('click', refresh);
+  tokenEl.addEventListener('change', () => { qs.set('token', tokenEl.value.trim()); history.replaceState(null, '', '?' + qs.toString()); refresh(); });
+  refresh();
+})();
+</script>
+</body>
+</html>

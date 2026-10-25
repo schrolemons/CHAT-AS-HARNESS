@@ -1,0 +1,23 @@
+{
+  "id": "ctx-memory-profile-store",
+  "name": "全局用户画像",
+  "version": "0.1.0",
+  "description": "跨会话的用户状态：身份、会话分布、互动次数、备注与结构化字段；完整信息留在本地，只有脱敏后的可分享层能进提示词。",
+  "category": "上下文与记忆",
+  "order": 5,
+  "tags": [
+    "用户画像",
+    "记忆",
+    "跨会话"
+  ],
+  "main": "index.js",
+  "enabled": true,
+  "hooks": [
+    "onIncoming",
+    "beforePrompt"
+  ],
+  "config": {
+    "maxShare": 3
+  },
+  "layer": "C"
+}

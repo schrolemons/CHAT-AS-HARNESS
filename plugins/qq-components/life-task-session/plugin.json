@@ -1,0 +1,24 @@
+{
+  "id": "life-task-session",
+  "name": "任务委派会话",
+  "version": "1.0.0",
+  "description": "大肥鱼可以在 DSH 里启动独立任务会话（用户在界面可见），做询问-回答、跟进任务、取回结果并转达用户——L 层（生命周期与编排）的多人格协作组件。",
+  "layer": "L",
+  "category": "生命周期与编排",
+  "order": 30,
+  "tags": [
+    "task",
+    "delegate",
+    "multi-agent",
+    "session"
+  ],
+  "hooks": [
+    "beforePrompt"
+  ],
+  "enabled": true,
+  "config": {
+    "maxConcurrentTasks": 3,
+    "maxTasks": 20,
+    "ownerQQ": ""
+  }
+}

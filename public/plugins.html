@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>插件管理 · qq-bridge</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #0f1115; color: #e6e8ee; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 18px; background: #151922; border-bottom: 1px solid #242a36; }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; font-weight: 600; }
+  header .muted { color: #8b93a7; font-size: 12px; }
+  button { background: #1e2530; color: #dfe4ef; border: 1px solid #2d3644; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: #3f7cff; }
+  button.primary { background: #2b6cff22; border-color: #3f7cff; color: #9dc0ff; }
+  input { background: #12161e; border: 1px solid #2d3644; color: #dfe4ef; border-radius: 8px; padding: 6px 10px; min-width: 180px; }
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 0; height: calc(100vh - 57px); }
+  #list { border-right: 1px solid #242a36; overflow: auto; padding: 10px; }
+  #detail { overflow: auto; padding: 16px 20px; }
+  .cat { color: #8b93a7; font-size: 12px; margin: 14px 4px 6px; letter-spacing: .5px; }
+  .card { border: 1px solid #242a36; background: #151a23; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .card:hover { border-color: #3a4a63; }
+  .card.active { border-color: #3f7cff; background: #182030; }
+  .card .top { display: flex; gap: 8px; align-items: center; }
+  .card .name { font-weight: 600; }
+  .card .ver { color: #6d768c; font-size: 11px; }
+  .card .desc { color: #98a1b5; font-size: 12px; margin-top: 4px; }
+  .tag { display: inline-block; font-size: 11px; color: #8fb4ff; background: #223050; border-radius: 999px; padding: 1px 8px; margin: 4px 4px 0 0; }
+  .pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid #2d3644; }
+  .on { color: #73d59a; border-color: #2f6b49; background: #16281d; }
+  .off { color: #d58b8b; border-color: #6b2f2f; background: #281616; }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  h3 { font-size: 13px; color: #aab4c8; margin: 18px 0 6px; }
+  pre { background: #12161e; border: 1px solid #242a36; border-radius: 10px; padding: 12px; white-space: pre-wrap; word-break: break-word; color: #cfd6e4; font-size: 12.5px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .empty { color: #6d768c; padding: 20px 6px; }
+  .err { color: #ff9c9c; }
+  a { color: #7fa8ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>插件管理</h1>
+  <span class="muted" id="status">加载中…</span>
+  <span style="flex:1"></span>
+  <input id="token" placeholder="控制台令牌（state/console-token）" />
+  <input id="q" placeholder="搜索插件 / 标签" />
+  <a href="/api/harness/page"><button>七层视图</button></a>
+  <button id="reloadAll" class="primary">重载全部</button>
+</header>
+<main>
+  <section id="list"><div class="empty">正在读取插件…</div></section>
+  <section id="detail"><div class="empty">从左边选一个插件看详情（说明、钩子、工具、状态）。</div></section>
+</main>
+<script>
+const LAYER_NAMES = { C: 'C 上下文记忆', T: 'T 工具', E: 'E 执行沙箱', L: 'L 生命周期', O: 'O 可观测', V: 'V 验证评估', G: 'G 治理安全', S: 'S 近人意识' };
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const tokenInput = document.getElementById('token');
+  tokenInput.value = qs.get('token') || '';
+  if (!tokenInput.value) {
+    try { const t = prompt('控制台访问令牌（state/console-token 的内容）'); if (t) { tokenInput.value = t; qs.set('token', t); history.replaceState(null, '', '?' + qs.toString()); } } catch {}
+  }
+  const state = { list: [], layers: [], active: null, q: '' };
+  const listEl = document.getElementById('list');
+  const detailEl = document.getElementById('detail');
+  const statusEl = document.getElementById('status');
+
+  const api = async (path, opts = {}) => {
+    const u = new URL(path, location.origin);
+    u.searchParams.set('token', tokenInput.value.trim());
+    const res = await fetch(u, { headers: { 'content-type': 'application/json' }, ...opts });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  };
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  function renderList() {
+    const q = state.q.trim().toLowerCase();
+    const match = (p) => !q || [p.id, p.name, p.description, p.category, ...(p.tags || [])].join(' ').toLowerCase().includes(q);
+    const items = state.list.filter(match);
+    const byId = new Map(items.map((p) => [p.id, p]));
+    const layers = state.layers.length ? state.layers : [{ id: '?', name: '未分类', plugins: items.map((p) => ({ id: p.id })) }];
+    const html = layers.map((layer) => {
+      const arr = (layer.plugins || []).map((x) => byId.get(x.id) || items.find((p) => p.id === x.id)).filter(Boolean).map((p) => p || null);
+      const cards = (layer.plugins || [])
+        .map((x) => byId.get(x.id))
+        .filter(Boolean)
+        .map((p) => `
+        <div class="card ${state.active === p.id ? 'active' : ''}" data-id="${esc(p.id)}">
+          <div class="top">
+            <span class="name">${esc(p.name)}</span>
+            <span class="ver">v${esc(p.version || '0')}</span>
+            <span style="flex:1"></span>
+            <span class="pill ${p.enabled ? 'on' : 'off'}">${p.enabled ? '启用' : '停用'}</span>
+          </div>
+          <div class="desc">${esc(p.description)}</div>
+          <div>${(p.tags || []).map((tag) => `<span class="tag">${esc(tag)}</span>`).join('')}</div>
+        </div>`).join('');
+      const body = cards || '<div class="empty" style="padding:8px 4px">这一层还没有插件（缺口）</div>';
+      return `<div class="cat">${esc(layer.id ? layer.id + ' · ' : '')}${esc(layer.name || '未分类')} · ${(layer.plugins || []).length}</div>${body}`;
+    }).join('');
+    listEl.innerHTML = html || '<div class="empty">没有匹配的插件</div>';
+    listEl.querySelectorAll('.card').forEach((el) => el.addEventListener('click', () => open(el.dataset.id)));
+  }
+
+  async function open(id) {
+    state.active = id;
+    renderList();
+    detailEl.innerHTML = '<div class="empty">读取中…</div>';
+    try {
+      const data = await api('/api/plugins/detail?id=' + encodeURIComponent(id));
+      const p = data.plugin;
+      detailEl.innerHTML = `
+        <div class="row">
+          <h2>${esc(p.name)} <span class="muted">${esc(p.id)} · v${esc(p.version || '0')}</span></h2>
+          <span style="flex:1"></span>
+          <span class="pill ${p.enabled ? 'on' : 'off'}">${p.enabled ? '启用' : '停用'}</span>
+          <button id="toggle">${p.enabled ? '停用' : '启用'}</button>
+        </div>
+        <div class="muted">${esc(p.description)}</div>
+        <div>${(p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        <h3>接口</h3>
+        <pre>钩子：${esc((p.hooks || []).join(' / ') || '无')}
+定时：${esc(p.schedule ? JSON.stringify(p.schedule) : '无')}
+入口：${esc(p.main)}
+工具：${esc((p.tools || []).map((t) => t.name).join('、') || '无')}</pre>
+        <h3>配置</h3>
+        <pre>${esc(JSON.stringify(p.config || {}, null, 2))}</pre>
+        <h3>skill.md</h3>
+        <pre>${esc(p.skill || '（这个插件没有 skill.md）')}</pre>
+        <h3>运行状态</h3>
+        <pre>${esc(JSON.stringify(p.state || {}, null, 2))}</pre>
+      `;
+      document.getElementById('toggle').addEventListener('click', async () => {
+        try {
+          await api('/api/plugins/toggle', { method: 'POST', body: JSON.stringify({ id: p.id, enabled: !p.enabled }) });
+          await refresh();
+          await open(p.id);
+        } catch (e) { statusEl.textContent = '切换失败：' + e.message; }
+      });
+    } catch (e) {
+      detailEl.innerHTML = `<div class="err">读取失败：${esc(e.message)}</div>`;
+    }
+  }
+
+  async function refresh() {
+    try {
+      const data = await api('/api/plugins');
+      state.list = data.plugins || [];
+      state.layers = data.layers || [];
+      statusEl.textContent = `${data.count} 个启用 / 共 ${data.total} 个` + (data.warnings && data.warnings.length ? ` · 警告 ${data.warnings.length}` : '');
+      renderList();
+    } catch (e) {
+      statusEl.textContent = '加载失败：' + e.message;
+      listEl.innerHTML = '<div class="err">读不到插件列表，检查令牌是否正确、桥接是否在跑。</div>';
+    }
+  }
+
+  document.getElementById('q').addEventListener('input', (e) => { state.q = e.target.value; renderList(); });
+  document.getElementById('reloadAll').addEventListener('click', async () => {
+    try { await api('/api/plugins/reload', { method: 'POST' }); await refresh(); if (state.active) open(state.active); } catch (e) { statusEl.textContent = '重载失败：' + e.message; }
+  });
+  tokenInput.addEventListener('change', () => { qs.set('token', tokenInput.value.trim()); history.replaceState(null, '', '?' + qs.toString()); refresh(); });
+  refresh();
+})();
+</script>
+</body>
+</html>

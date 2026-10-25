@@ -1,0 +1,23 @@
+{
+  "id": "obs-self-review",
+  "name": "自我迭代（功能/代码自查）",
+  "version": "0.1.0",
+  "description": "每 6 小时一次的功能与代码自查：找对话质量问题、工具调用失败、环境异常，做最小可回滚修复；只管功能代码优化，不碰记忆文件。",
+  "category": "可观测性与运维",
+  "order": 60,
+  "tags": [
+    "自查",
+    "优化",
+    "代码"
+  ],
+  "main": "index.js",
+  "enabled": true,
+  "hooks": [
+    "beforePrompt"
+  ],
+  "config": {
+    "intervalHours": 6,
+    "maxFixesPerRound": 3
+  },
+  "layer": "O"
+}

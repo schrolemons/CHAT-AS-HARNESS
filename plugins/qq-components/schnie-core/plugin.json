@@ -1,0 +1,17 @@
+{
+  "id": "schnie-core",
+  "name": "近人意识（SCHNIE）",
+  "version": "0.1.0",
+  "description": "预留的「近人意识」核心层：将来由哲学思考资料与逻辑方式驱动，让 AI 更接近「像人一样」的交互；当前只占位，不改任何行为。",
+  "category": "近人意识（SCHNIE）",
+  "layer": "S",
+  "order": 90,
+  "tags": ["SCHNIE", "近人意识", "占位"],
+  "main": "index.js",
+  "enabled": true,
+  "hooks": [],
+  "config": {
+    "philosophy": [],
+    "logic": []
+  }
+}

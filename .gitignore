@@ -1,0 +1,14 @@
+# 运行期数据与凭据 —— 绝不入库
+state/
+node_modules/
+config.json
+*.bak-*
+*.bak
+.env
+.credentials.yaml
+.playwright-mcp/
+.DS_Store
+
+# 本地登录态 / 浏览器 profile / 用户目录
+*.crdownload
+browser-profile/

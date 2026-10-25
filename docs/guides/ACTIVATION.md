@@ -18,6 +18,7 @@
    - `allow.groups` / `allow.private`（白名单，至少填自己）。
 4. **QQ 网关（OneBot v11）**：确认 SnowLuma / NapCat / Lagrange 任一已装好并给出 ws/http 地址；
    把 `snowluma.wsUrl` / `httpUrl` / `accessToken` 填进 `config.json`。**本仓库不打包网关二进制**。
+   ⚠️ SnowLuma 请装在**普通目录**（当前对接 2.2.0），不要放进 Harness/大肥鱼的沙箱工作目录，否则低完整性会导致「node 完整性过低」、OneBot 起不来。
 5. **角色**：`roles/` 下选人格（默认 `大肥鱼`），`config.json` 的 `role` 字段可改；想自定义就加一个 `roles/<名字>.md`。
 6. **小组件（插件）**：默认全上；管理页 `/api/plugins/page` 或七层驾驶舱 `/api/harness/page` 可停用/启用。
 7. **启动**：双击《一键启动》或 `node src/bridge.js`；看到「桥接已启动 / SnowLuma 已连接 / DSH 已就绪」即成功。

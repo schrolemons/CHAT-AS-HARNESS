@@ -35,6 +35,7 @@
 
    - `snowluma.wsUrl` / `httpUrl`（例如 `ws://127.0.0.1:3001` / `http://127.0.0.1:3000`，分别对应 OneBot WebSocket 与 HTTP API 端口）
    - `snowluma.accessToken`
+   - `snowluma.homeDir` / `launcherPath`：指向 SnowLuma 安装目录（当前对接 **2.2.0**）。⚠️ **不要**把 SnowLuma 装在 Harness/大肥鱼的沙箱工作目录里——沙箱文件带低完整性标签，SnowLuma 会报「node 完整性过低」、OneBot 起不来；装到普通目录再指过来。
    - `dsh.authToken`（新版 DSH 的 launch token，用于换取 Cookie；默认留空，桥接会自动从 DSH guard 日志发现，DSH 重启后也会自动重新发现）
    - `ownerQQ`
    - `allow.private` / `allow.groups`

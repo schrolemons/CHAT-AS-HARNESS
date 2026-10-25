@@ -38,10 +38,17 @@ config.example.json 配置模板（无任何真实凭据）
 - 凭据、令牌、QQ 号**只在本地 config/state 里**，绝不入库、绝不外发。
 - 浏览器登录态与任何用户目录**不会被打包**；浏览器管理组件只在本机复用你的真实登录态。
 
+## SnowLuma 安装注意（重要）
+
+- 当前按 **SnowLuma 2.2.0**（win-x64）对接；连接配置不变：OneBot WebSocket `ws://127.0.0.1:3001`、HTTP API `http://127.0.0.1:3000`，两者 token 各一。
+- ⚠️ **不要把 SnowLuma 装进 Harness / 大肥鱼的沙箱工作目录里**（例如 `DSH BOT` 目录树）。DSH 沙箱创建的文件会带 Windows「低完整性（Low Mandatory Level）」标签，SnowLuma 的 `node.exe` 会以低完整性启动，原生组件挂不进 QQ——表现就是 WebUI 报「node 完整性过低」、OneBot（3000/3001）起不来。
+- 正确做法：装到**普通目录**，例如 `C:\Users\<你>\Desktop\USTC GIT\SnowLuma-v2.2.0-win-x64`，再把 `config.json` 的 `snowluma.homeDir` / `launcherPath` 指向它。
+- 万一已经在沙箱目录里了，可以用 `icacls <SnowLuma目录> /setintegritylevel "(OI)(CI)M" /T /C` 把完整性抬回 Medium 临时跑，但治本还是搬出去。
+
 ## 源项目署名与许可
 
 - **DeepSeek Harness**：运行环境，请自行安装（本仓库不重分发）。
-- **SnowLuma**（OneBot v11 网关）：请按其说明安装；本仓库只含连接配置与指引。
+- **SnowLuma**（OneBot v11 网关，对接版本 2.2.0）：请按其说明安装；本仓库只含连接配置与指引。
 - **qq-bridge** 本仓库衍生，保留上游 MIT 许可与说明。
 
 ## License
